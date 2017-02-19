@@ -5,7 +5,12 @@ Rubrics (marking grids) allow students to quickly see how their work will be gra
 
 This plugin extends the builtin rubric features in moodle to allow students to use the same rubric that the teacher uses in order to self assess their work. Their self assessments are then visible to the teacher who grades their work which can speed up or inform the marking process as well as informing the teacher who is over/under confident with their work.
 
-![image](https://cloud.githubusercontent.com/assets/760604/23101294/118b5e7a-f688-11e6-872b-accfbb5aa709.png)
+# Example
+The image below shows what the teacher sees when grading student's work.
+Coloured in green is the grade the teacher has chosen.
+A green border shows what the student has said they think they're working at
+![image](https://cloud.githubusercontent.com/assets/760604/23101310/8a9906b4-f688-11e6-924a-75a6a4171594.png)
+Cells are coloured in pink if the teachers has changed a grade but hasn't yet pressed save: the pink cell shows what the previous grade was.
 
 # Install instructions:
 Unzip the contents of this folder into your moodle folder. The 'grade' folder should be in the root level directory of your moodle install. 
