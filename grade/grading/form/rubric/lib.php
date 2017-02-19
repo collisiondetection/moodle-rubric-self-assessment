@@ -98,6 +98,7 @@ class gradingform_rubric_controller extends gradingform_controller {
      * @param int|null $usermodified optional userid of the author of the definition, defaults to the current user
      */
     public function update_definition(stdClass $newdefinition, $usermodified = null) {
+		
         $this->update_or_check_rubric($newdefinition, $usermodified, true);
         if (isset($newdefinition->rubric['regrade']) && $newdefinition->rubric['regrade']) {
             $this->mark_for_regrade();
@@ -136,7 +137,8 @@ class gradingform_rubric_controller extends gradingform_controller {
         if (!isset($newdefinition->rubric['options'])) {
             $newdefinition->rubric['options'] = self::get_default_options();
         }
-        $newdefinition->options = json_encode($newdefinition->rubric['options']);
+        
+		$newdefinition->options = json_encode($newdefinition->rubric['options']);
         $editoroptions = self::description_form_field_options($this->get_context());
         $newdefinition = file_postupdate_standard_editor($newdefinition, 'description', $editoroptions, $this->get_context(),
             'grading', 'description', $this->definition->id);
@@ -258,6 +260,39 @@ class gradingform_rubric_controller extends gradingform_controller {
                 $haschanges[3] = true;
             }
         }
+		
+		// create or remove gradebook entry for self assessment
+		if($newdefinition->rubric['options']['allowselfassessment']) {
+			$instanceid = $DB->get_field_sql("SELECT instance FROM {course_modules} WHERE module=(SELECT id FROM {modules} WHERE name='assign') AND id=(SELECT instanceid FROM {context} WHERE id=(SELECT contextid FROM {grading_areas} WHERE id = (SELECT areaid FROM {grading_definitions} WHERE id=?)))", array($this->definition->id));
+			$assign = $DB->get_record('assign', array('id'=>$instanceid));
+			
+			// check if self assessment grading item already exists
+			$grade_items = array('courseid'=>$assign->course, 'itemname'=>$assign->name . ' (S/A)', 'itemtype'=>'mod', 'itemmodule'=>'assign', 'iteminstance'=>$assign->id, 'itemnumber'=>1);
+			if($DB->record_exists('grade_items', $grade_items)) {
+			} else {
+				// adapt grade item for teacher assessed grade
+				$grade_items['itemname'] = $assign->name;
+				$grade_item = $DB->get_record('grade_items', $grade_items);
+				if(!$grade_item) {
+					$grade_item = new stdClass();
+					$grade_item->courseid = $assign->course;
+					$grade_item->categoryid = 1;
+					$grade_item->itemtype = 'mod';
+					$grade_item->itemmodule = 'assign';
+					$grade_item->iteminstance = $assign->id;
+				}
+				$grade_item->itemname = $assign->name . ' (S/A)';
+				$grade_item->timecreated = time();
+				$grade_item->timemodified = time();
+				$grade_item->itemnumber = 1;
+				$grade_item->id = $DB->insert_record('grade_items', $grade_item);
+				
+			}
+			
+		} else {
+			error_log('changing to disable self assessment');	
+		}
+		
         foreach (array('status', 'description', 'descriptionformat', 'name', 'options') as $key) {
             if (isset($newdefinition->$key) && $newdefinition->$key != $this->definition->$key) {
                 $haschanges[1] = true;
@@ -362,7 +397,7 @@ class gradingform_rubric_controller extends gradingform_controller {
             'showscorestudent' => 1,
             'enableremarks' => 1,
             'showremarksstudent' => 1,
-						'allowselfassessment' => 0
+			'allowselfassessment' => 0
         );
         return $options;
     }
@@ -551,6 +586,22 @@ class gradingform_rubric_controller extends gradingform_controller {
 
         // get the list of instances
         $instances = array_keys($DB->get_records('grading_instances', array('definitionid' => $this->definition->id), '', 'id'));
+		
+		// get associated assignment
+		$sql = "SELECT * FROM {assign} WHERE id=(SELECT instance FROM {course_modules} WHERE id=(SELECT instanceid FROM {context} WHERE id=(SELECT contextid FROM {grading_areas} WHERE component='mod_assign' AND id = (SELECT areaid FROM {grading_definitions} WHERE id=" . $this->definition->id . "))))";
+		$assign = $DB->get_record_sql($sql);
+		
+		if($assign) {
+			// get self assessment grade item
+			$grade_item = $DB->get_record('grade_items', array('itemname'=>$assign->name . ' (S/A)', 'itemtype'=>'mod', 'itemmodule'=>'assign'));
+			
+			if($grade_item) {
+				// remove self assessment grades
+				$DB->delete_records('grade_grades', array('itemid'=>$grade_item->id));
+				$DB->delete_records('grade_items', array('id'=>$grade_item->id));
+			}
+		}
+		
         // delete all fillings
         $DB->delete_records_list('gradingform_rubric_fillings', 'instanceid', $instances);
         // delete instances
@@ -561,6 +612,8 @@ class gradingform_rubric_controller extends gradingform_controller {
         $DB->delete_records_list('gradingform_rubric_levels', 'criterionid', $criteria);
         // delete critera
         $DB->delete_records_list('gradingform_rubric_criteria', 'id', $criteria);
+		// delete self assessments
+		$DB->delete_records_list('gradingform_rubric_self', 'instanceid', $instances);
     }
 
     /**

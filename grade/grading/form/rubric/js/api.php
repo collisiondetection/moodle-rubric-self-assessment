@@ -58,24 +58,6 @@ switch($cmd) {
 
   echo(json_encode($result));
 
-
-
-
-  	/*
-	$instanceid = required_param('instanceid', PARAM_INT);
-		$uid = required_param('uid', PARAM_INT);
-
-		/// TODO get instanceid from definition id
-		$records = $DB->get_records('gradingform_rubric_self', array('userid' => $uid, 'instanceid' => $instanceid));
-		$result = array();
-		foreach($records as $r) {
-			$result[$r->criterionid] = $r->levelid;
-		}
-		echo(json_encode($result));
-		TODO: get self assessment grades from cmid and userid
-
-*/
-
   break;
 
 	case 'self_assess':
@@ -111,17 +93,49 @@ switch($cmd) {
 			$self = json_decode(json_encode(array('instanceid' => $instance->id, 'criterionid' => $criterionid, 'levelid' => $levelid, 'userid' => $USER->id)));
 			$self->id = $DB->insert_record('gradingform_rubric_self', $self);
 		}
-/*
-		// save
-		echo('<pre>');
-		$sql = "saving $instanceid $criterionid $levelid $criteria $level";
+		
+		// get associated assignment
+		$sql = "SELECT * FROM {assign} WHERE id=(SELECT instance FROM {course_modules} WHERE id=(SELECT instanceid FROM {context} WHERE id=(SELECT contextid FROM {grading_areas} WHERE component='mod_assign' AND id = (SELECT areaid FROM {grading_definitions} WHERE id=" . $definitionid . "))))";
+		$assign = $DB->get_record_sql($sql);
+		
+		$grade_item = $DB->get_record('grade_items', array('itemname'=>$assign->name . ' (S/A)', 'itemtype'=>'mod', 'itemmodule'=>'assign'));
+		
+		$score = $DB->get_field_sql("SELECT SUM(score) FROM {gradingform_rubric_levels} WHERE id IN (SELECT levelid FROM {gradingform_rubric_self} WHERE userid=" . $USER->id . " AND instanceid = " . $instance->id . ")");
+		
+		$sql = "SELECT SUM(score) AS total FROM (SELECT MAX(l.score) AS score FROM {gradingform_rubric_criteria} AS c 
+LEFT JOIN {gradingform_rubric_levels} AS l ON c.id=l.criterionid WHERE c.definitionid=$definitionid GROUP BY c.id) scores";
+		$maxscore = $DB->get_field_sql($sql);
+		
+		
+		$rawgrade = round($score * 100 / $maxscore, 2);
+		
+		//echo("score: $rawgrade, max: $maxscore, raw: $score");
+		$grade_data = array('itemid'=>$grade_item->id, 'userid'=>$USER->id);
+		if($DB->record_exists('grade_grades', $grade_data)) {
+			$grade = $DB->get_record('grade_grades', $grade_data);
+			$grade->timemodified = time();
+			$grade->rawgrade = $rawgrade;
+			$grade->finalgrade = $rawgrade;
+			$DB->update_record('grade_grades', $grade);
+		} else {
+			$grade = new stdClass();
+			$grade->itemid = $grade_item->id;
+			$grade->userid = $USER->id;
+			$garde->timemodified = time();
+			$grade->rawgrade = $rawgrade;
+			$grade->finalgrade = $rawgrade;
+			$grade->rawgrademax = 100.0;
+			$grade->rawgrademin = 0.0;
+			$grade->rawscaleid = NULL;
+			$grade->usermodified = $USER->id;
+			$grade->aggregationstatus = 'used';
+			$grade->aggregationweight = 1.0;
+			$grade->id = $DB->insert_record('grade_grades', $grade);
+		}
+		
+		
 
-		echo($sql);
-		print_r($instance);
-		print_r($self);
-		echo('</pre>');
-*/
-	echo('1');
+	//echo($sql);
 	break;
 }
 
