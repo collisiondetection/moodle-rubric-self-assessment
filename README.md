@@ -22,9 +22,12 @@ Unzip the contents of this folder into your moodle folder. The 'grade' folder sh
 All of the files for this module live in grade/grading/form/rubric and will overwrite any files in that location so make sure you take a backup of your moodle installation (files plus database) before experimenting with this plugin.
 
 # Usage instructions
-When you define or edit a rubric, you'll get an extra option for 'enable self assessment'.
-This will allow students to click on the preview rubric to indicate the grade they think they're working at.
+When you define or edit a rubric, you'll get an extra option for 'enable self assessment':
+![image](https://cloud.githubusercontent.com/assets/760604/23101362/abb987aa-f689-11e6-88be-f1d07c85bd90.png)
+
+This will allow students to click on the preview rubric to indicate the grade they think they're working at. Student self assessments are saved as soon as they click (they don't have to click submit).
+
 These self assessment grades will then be visible to the teacher when they grade the students work.
 
 # Disclaimer
-This module is in its early development stages and is provided with no guarantee.
+This module is in its early development stages and is provided with no guarantee. If you spot a bug, please create an issue to describe what the problem is.
