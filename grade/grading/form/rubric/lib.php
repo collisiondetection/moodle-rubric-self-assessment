@@ -290,7 +290,14 @@ class gradingform_rubric_controller extends gradingform_controller {
 			}
 			
 		} else {
-			error_log('changing to disable self assessment');	
+			$instanceid = $DB->get_field_sql("SELECT instance FROM {course_modules} WHERE module=(SELECT id FROM {modules} WHERE name='assign') AND id=(SELECT instanceid FROM {context} WHERE id=(SELECT contextid FROM {grading_areas} WHERE id = (SELECT areaid FROM {grading_definitions} WHERE id=?)))", array($this->definition->id));
+			$assign = $DB->get_record('assign', array('id'=>$instanceid));
+			
+			// check if self assessment grading item already exists
+			$grade_items = array('courseid'=>$assign->course, 'itemname'=>$assign->name . ' (S/A)', 'itemtype'=>'mod', 'itemmodule'=>'assign', 'iteminstance'=>$assign->id, 'itemnumber'=>1);
+			if($DB->record_exists('grade_items', $grade_items)) {
+				$DB->delete_records('grade_items', $grade_items);
+			}	
 		}
 		
         foreach (array('status', 'description', 'descriptionformat', 'name', 'options') as $key) {
