@@ -17,7 +17,7 @@ Both the student assessment and teacher assessment are saved into the gradebook 
 
 
 # Install instructions:
-Unzip the contents of this folder into your moodle folder. The 'grade' folder should be in the root level directory of your moodle install. 
+Download a copy of this plugin [here](https://github.com/pddring/moodle-rubric-self-assessment/archive/master.zip). Unzip the contents of this folder into your moodle folder. The 'grade' folder should be in the root level directory of your moodle install. 
 
 All of the files for this module live in grade/grading/form/rubric and will overwrite any files in that location so make sure you take a backup of your moodle installation (files plus database) before experimenting with this plugin.
 
